@@ -248,7 +248,7 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.sampleSelect.setFont(font)
         self.sampleSelect.setAutoFillBackground(True)
-        self.sampleSelect.setMinimum(1)
+        self.sampleSelect.setMinimum(10)
         self.sampleSelect.setMaximum(1000)
         self.sampleSelect.setSingleStep(10)
         self.sampleSelect.setProperty("value", 10)
