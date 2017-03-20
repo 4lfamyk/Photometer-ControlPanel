@@ -13,10 +13,17 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		self.selectionState = 0
                 self.startSetting = 0
                 self.endSetting = 0
-              
-		self.leftKey = switchInterruptThread(17,1)
-		self.rightKey = switchInterruptThread(26,2)
-
+		#Pin Assignments
+		self.left = 17
+		self.right = 26
+		self.up = 0
+		self.down = 0
+		self.ok = 0
+		self.hxdata = 0
+		self.hxsck = 0
+		self.power = 0
+		self.rtcAdd = 0x51		
+            
 		self.setupSignals()
 		self.nowStartSelect.setChecked(True)
 		self.nowStartSelect.setFocus()
@@ -125,23 +132,6 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 				self.terminateSampling()
 				self.resetGUI()
 
-
-#                       elif self.selectionState == 1:
-#                               self.nowStartSelect.setEnabled(False)
-#                               self.laterStartSelect.setEnabled(False)
-#                               self.buttonStartSelect.setEnabled(False)
-#                               self.startTimeEdit.setEnabled(False)
-#                               self.buttonEndSelect.setFocus(True)
-#                               self.selectionState = 3         #go to End parameter selection
-
-#                       elif self.selectionState == 4:
-#                               self.buttonEndSelect.setEnabled(False)
-#                                self.timeEndSelect.setEnabled(False)
-#                                self.sampleEndSelect.setEnabled(False)
-#                                self.endTimeEdit.setEnabled(False)
-#                               self.sampleSelect.setEnabled(False)
-#                                self.rateSelect.setFocus(True)
-#                                self.selectionState = 7 
 		elif e.key() == QtCore.Qt.Key_Left:
 			if self.selectionState == 0:
 				if self.laterStartSelect.isChecked() == True:
@@ -225,22 +215,41 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 	def setupSignals(self):
 		self.signalObj = InterruptSignals()
 		self.signalObj.Key.connect(self.keyPressEvent)
-		
+	
 		self.nowStartSelect.setFocus()
+		self.nowStartSelect.setEnabled(True)
 		self.goButton.clicked.connect(self.goButtonClicked)
+
+                self.leftKey = switchInterruptThread(self.left,1)
+                self.rightKey = switchInterruptThread(self.right,2)
+                self.upKey = switchInterruptThread(self.up,3)
+                self.downKey = switchInterruptThread(self.down,4)
+                self.okKey = switchInterruptThread(self.ok,0)
 
 		self.leftKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
 		self.rightKey.connect(self.rightKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.upKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.downKey.connect(self.rightKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.okKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
 
 		self.leftKey.active = True
 		self.rightKey.active = True
-                #self.leftKey.Key.connect(self.leftKeyPressEvent)
-#               self.rightKey.Key.connect(keyPressEvent)
-#               self.upKey.Key.connect(keyPressEvent)
-#               self.downKey.Key.connect(keyPressEvent)
-#               self.okKey.Key.connect(keyPressEvent)
+                self.upKey.active = True
+                self.downKey.active = True
+                self.okKey.active = True
+
+#		self.adcSensor = ADC(self.hxdata,self.sck)
+#		self.rtcSensor = RTC()
+#		self.rtcAlarm = Alarm()
+#		self.control = controlThread()
+
 		self.leftKey.start()
 		self.rightKey.start()
+                self.upKey.start()
+                self.downKey.start()
+                self.okKey.start()
+		
+
 
 	def goButtonClicked(self):
 		print "Go Button Clicked"
@@ -294,6 +303,26 @@ class switchInterruptThread(QtCore.QThread,InterruptSignals):
 			except KeyboardInterrupt: 
 				print "Exiting"
 			sleep(0.1)
+
+
+class ADC(QtCore.QThread):
+	def __init__(self,data,sck,rate=10,parent=None):
+		QtCore.QThread.__init__(self,parent)
+		self.setTerminationEnabled(True)
+		self.active = False
+		self.data = data
+		self.sck = sck
+		self.rate = rate
+
+	def run(self):
+		while True:
+			while self.active == True:
+				print "HX"
+				sleep(1/rate)			
+			sleep(0.1)
+
+
+
 def main():
 	GPIO.setmode(GPIO.BCM)
 	GPIO.setwarnings(False)
