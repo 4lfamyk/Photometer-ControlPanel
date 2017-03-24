@@ -30,6 +30,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 	#Connections and Threads Setup
          
 		self.setupSignals()
+		self.setupControl()
 		self.nowStartSelect.setChecked(True)
 		self.nowStartSelect.setFocus()
 		self.show()
@@ -213,6 +214,18 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		elif e.key() == QtCore.Qt.Key_Down:
 			print "Down Pressed"
 
+	def setupControl(self):
+                self.rtcThread = RTC()
+                self.alarmThread = rtcAlarm()
+                self.adcThread = ADC()
+                self.rtcThread.start()
+                self.adcThread.start()
+                self.alarmThread.start()
+                self.rtcThread.active = True
+                self.adcThread.connect(self.adcThread,QtCore.SIGNAL("sampleReady(float)"),self.sampleReady)
+
+
+
 #Sets up the interconnections between the various threads
 	def setupSignals(self):
 		self.signalObj = InterruptSignals()
@@ -271,6 +284,15 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 #incorporate buttonend signal here
 			self.control.active = False
                         self.selectionState = 0
+	
+	def sampleReady(self,sample):
+                timestamp = self.rtcThread.time
+                entry = [self.timestamp,self.data]
+                self.writer.writerow(entry)
+
+        def setFilename(self):
+                self.filename = self.rtcThread.getTimeStr()
+                self.writer = csv.writer(open(self.filename,'a'))
 
 
 	def keyDecode(self,e):
@@ -312,55 +334,6 @@ class switchInterruptThread(QtCore.QThread,InterruptSignals):
 			except KeyboardInterrupt: 
 				print "Exiting"
 			sleep(0.1)
-
-class controlThread(QtCore.QThread):
-	def __init__(self):
-		QtCore.QThread.__init__(self,parent)
-		self.setTerminationEnabled(True)
-		self.active = False
-		self.rtcThread = RTC()
-		self.alarmThread = rtcAlarm()
-		self.adcThread = ADC()
-		self.rtcThread.start()
-		self.adcThread.start()
-		self.alarmThread.start()
-		self.rtcThread.active = True
-
-		self.adcThread.connect(self.adcThread,QtCore.SIGNAL("sampleReady(float)"),self.sampleReady)
-	
-	def setParameters(self,startsetting,endsetting,samplerate,starttime=None,endtime=None,numberofsamples=0):
-		self.start = startsetting
-		self.end = endsetting
-		self.rate = samplerate
-		self.starttime = starttime
-		self.endtime = endtime
-		self.samples = samples		
-
-	def sampleReady(self,sample):
-		timestamp = self.rtcThread.time
-		entry = [self.timestamp,self.data]
-		self.writer.writerow(entry)
-	
-	def run(self):
-		while True:
-			while self.active == True:
-				if self.started == 0:
-					if self.startsetting == 0:		#Now Start
-						self.setFilename()
-						self.adcThread.active = True
-
-					elif self.startsetting == 1:
-						self.rtcThread.setAlarm(self.startTime)
-	
-					elif self.startsetting == 2:
-						
-
-					self.started = 1
-
-	def setFilename(self):
-		self.filename = self.rtcThread.getTimeStr()
-		self.writer = csv.writer(open(self.filename,'a'))
-
 
 class RTC(QtCore.QThread):
 	def __init__(self):
