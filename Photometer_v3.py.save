@@ -5,8 +5,6 @@ from PyQt4 import QtGui,QtCore
 import UI
 import RPi.GPIO as GPIO
 from time import sleep
-import csv
-import PCF8563
 
 class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 	def __init__(self,parent=None):
@@ -268,8 +266,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 			self.nowStartSelect.setChecked(True)
                         self.laterStartSelect.setEnabled(True)
                         self.buttonStartSelect.setEnabled(True)
-#incorporate buttonend signal here
-			self.control.active = False
+                        self.control.active = False
                         self.selectionState = 0
 
 
@@ -317,98 +314,10 @@ class controlThread(QtCore.QThread):
 	def __init__(self):
 		QtCore.QThread.__init__(self,parent)
 		self.setTerminationEnabled(True)
-		self.active = False
 		self.rtcThread = RTC()
-		self.alarmThread = rtcAlarm()
-		self.adcThread = ADC()
-		self.rtcThread.start()
-		self.adcThread.start()
-		self.alarmThread.start()
-		self.rtcThread.active = True
-
-		self.adcThread.connect(self.adcThread,QtCore.SIGNAL("sampleReady(float)"),self.sampleReady)
-	
-	def setParameters(self,startsetting,endsetting,samplerate,starttime=None,endtime=None,numberofsamples=0):
-		self.start = startsetting
-		self.end = endsetting
-		self.rate = samplerate
-		self.starttime = starttime
-		self.endtime = endtime
-		self.samples = samples		
-
-	def sampleReady(self,sample):
-		timestamp = self.rtcThread.time
-		entry = [self.timestamp,self.data]
-		self.writer.writerow(entry)
-	
-	def run(self):
-		while True:
-			while self.active == True:
-				if self.started == 0:
-					if self.startsetting == 0:		#Now Start
-						self.setFilename()
-						self.adcThread.active = True
-
-					elif self.startsetting == 1:
-						self.rtcThread.setAlarm(self.startTime)
-	
-					elif self.startsetting == 2:
-						
-
-					self.started = 1
-
-	def setFilename(self):
-		self.filename = self.rtcThread.getTimeStr()
-		self.writer = csv.writer(open(self.filename,'a'))
-
-
-class RTC(QtCore.QThread):
-	def __init__(self):
-		QtCore.QThread.__init__(self,parent)
-		self.setTerminationEnabled(True)
-		self.active = False
-		self.rtc = PCF8563(1,0x51)
-		self.time = self.rtc.read_datetime()
-	def run(self):
-		while True:
-			while self.active:
-				self.time = self.rtc.read_datetime()
-				self.timestr = self.rtc.read_str()
-	def setAlarm(self,hour,min):
-		if self.rtc.check_if_alarm_on():
-			self.rtc.turn_alarm_off()
-		if self.rtc.check_for_alarm_interrupt():
-			self.rtc.disable_alarm_interrupt()
-		self.rtc.clear_alarm()
-		self.rtc.set_daily_alarm(hour,min)
-		self.rtc.enable_alarm_interrupt()
 		
-	def getTimeStr(self):
-		return self.rtc.read_str()
 
-class rtcAlarm(QtCore.QThread,InterruptSignals):
-        def __init__(self,pin,key,parent=None):
-                InterruptSignals.__init__(self)
-                QtCore.QThread.__init__(self,parent)
-                self.setTerminationEnabled(True)
-                self.pin = pin
-                self.key = key
-                self.active = False
-                GPIO.setup(self.pin,GPIO.IN)
-        def run(self):
-                while self.active==True:
-                        try:
-                                if GPIO.input(self.pin)==0:
-                                        sleep(0.08)
-                                        if GPIO.input(self.pin)==0:
-                                #GPIO.wait_for_edge(self.pin,GPIO.FALLING)
-                                #print `self.pin` + "Pressed"
-                                                self.emit(QtCore.SIGNAL("keyDe$
-                        except KeyboardInterrupt:
-                                print "Exiting"
-                        sleep(0.1)
 
-	
 
 class ADC(QtCore.QThread):
 	def __init__(self,data,sck,rate=10,parent=None):
@@ -418,25 +327,14 @@ class ADC(QtCore.QThread):
 		self.data = data
 		self.sck = sck
 		self.rate = rate
-		self.adc = HX711(self.data,self.sck)
-		self.value = 0
-		self.adc.set_reading_format("LSB","MSB")
-		self.adc.set_reference_unit(92)
-		self.adc.reset()	
-		self.adc.tare()
-		self.delayval = 1/self.rate
 
 	def run(self):
 		while True:
 			while self.active == True:
-				self.delayval = (1/self.rate) -(0.05)
-				self.value = self.adc.get_weight(4)
-				self.emit(QtCore.SIGNAL("sampleReady(float)"),self.value)				
-				sleep(self.delayval)			
-			sleep(0.01)
+				print "HX"
+				sleep(1/rate)			
+			sleep(0.1)
 
-	def setRate(self,rate):
-		self.rate = rate
 
 
 def main():
