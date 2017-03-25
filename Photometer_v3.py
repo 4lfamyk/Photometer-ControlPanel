@@ -18,7 +18,8 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		self.selectionState = 0		# Tracks the state of GUI
                 self.startSetting = 0		# Stores the start mode
                 self.endSetting = 0		# Stores the end mode
-	
+		self.buttonStart = False
+		self.buttonEnd = False
 	#Pin Assignments
 
 		self.left = 17
@@ -147,30 +148,17 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                                 elif self.sampleEndSelect.isChecked() == True:
                                         self.timeEndSelect.setChecked(True)
 			elif self.selectionState == 1:
-				if self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.AmPmSection:
-					self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)	
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
+				if self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
                                         self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
                                 elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.YearSection)
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.YearSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MonthSection)
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.MonthSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.DaySection)
-
+                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)
+                                
                         elif self.selectionState == 3:
-                                if self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.AmPmSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
+                                if self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
                                         self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
                                 elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.YearSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.YearSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MonthSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.MonthSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.DaySection)
-
-
+                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)
+                                
 		elif e.key() == QtCore.Qt.Key_Right:
 			if self.selectionState == 0:
                                 if self.nowStartSelect.isChecked() == True:
@@ -185,28 +173,16 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                                         self.sampleEndSelect.setChecked(True)
 
 			elif self.selectionState == 1:
-                                if self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.DaySection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MonthSection)
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.MonthSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.YearSection)
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.YearSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
-                                elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
+                                if self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
                                         self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)
                                 elif self.startTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
-                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.AmPmSection)
+                                        self.startTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
 		
                         elif self.selectionState == 3:
-                                if self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.DaySection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MonthSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.MonthSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.YearSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.YearSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
-                                elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
+                                if self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.HourSection:
                                         self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.MinuteSection)
                                 elif self.endTimeEdit.currentSection() == QtGui.QDateTimeEdit.MinuteSection:
-                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.AmPmSection)
+                                        self.endTimeEdit.setCurrentSection(QtGui.QDateTimeEdit.HourSection)
 
 
 		elif e.key() == QtCore.Qt.Key_Up:
@@ -223,7 +199,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                 self.alarmThread.start()
                 self.rtcThread.active = True
                 self.adcThread.connect(self.adcThread,QtCore.SIGNAL("sampleReady(float)"),self.sampleReady)
-
+		self.alarmThread.connect(self.alarmThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
 
 
 #Sets up the interconnections between the various threads
@@ -253,8 +229,6 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                 self.downKey.active = True
                 self.okKey.active = True
 
-		self.control = controlThread()
-
 		self.leftKey.start()
 		self.rightKey.start()
                 self.upKey.start()
@@ -264,8 +238,8 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 
 
 	def goButtonClicked(self):
-		if self.selectionState == 6:
-			self.control.setParameters(self.startSetting,self.endSetting,self.rate,self.endTime,self.startTime,self.samples)
+		if self.selectionState == 6 and self.buttonStart == False:
+			#self.control.setParameters(self.startSetting,self.endSetting,self.rate,self.endTime,self.startTime,self.samples)
 			self.nowStartSelect.setEnabled(False)
 			self.laterStartSelect.setEnabled(False)
                 	self.buttonStartSelect.setEnabled(False)
@@ -273,27 +247,78 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                 	self.timeEndSelect.setEnabled(False)
                 	self.sampleEndSelect.setEnabled(False)
                 	self.rateSelect.setEnabled(False)
-                	self.control.active = True
+			self.sampleCount = 0
+
+			if startSetting == 0:
+				if self.endSetting = 1:
+					hour = endTime.toString("h")
+        	                        minute = endTime.toString("m")
+	                                self.rtcThread.setAlarm(hour,minute)
+                	                self.alarmThread.active = True
+					self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
+				self.adcThread.active = True
+				self.selectionState = 7
+			elif startSetting == 1:
+				hour = self.startTime.toString("h")
+				minute = self.startTime.toString("m")
+				self.rtcThread.setAlarm(hour,minute)
+				self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
+			elif startSetting == 2:
+				self.buttonStart = True
+		
+		elif self.selectionState == 6 and self.buttonStart == True:
+ 			self.adcThread.active = True
 			self.selectionState = 7
-			self.control.start()
+
 		elif self.selectionState == 7:
-			self.nowStartSelect.setEnabled(True)
-			self.nowStartSelect.setChecked(True)
-                        self.laterStartSelect.setEnabled(True)
-                        self.buttonStartSelect.setEnabled(True)
-#incorporate buttonend signal here
-			self.control.active = False
-                        self.selectionState = 0
+
+			if endSetting == 0:
+				self.adcThread.active = False
+				self.nowStartSelect.setEnabled(True)
+	                        self.nowStartSelect.setChecked(True)
+        	                self.laterStartSelect.setEnabled(True)
+                	        self.buttonStartSelect.setEnabled(True)
+				self.nowStartSelect.setFocus()
+				self.file.close()
+				self.selectionState = 0
+
+			elif endSetting  == 2:
+
 	
 	def sampleReady(self,sample):
                 timestamp = self.rtcThread.time
                 entry = [self.timestamp,self.data]
                 self.writer.writerow(entry)
-
+		self.sampleCount = self.sampleCount + 1
+		if self.endSetting == 2:
+			if self.sampleCount == self.samples:
+				self.adcThread.active = False
+				self.selectionState = 0
+				self.file.close()
+                                self.nowStartSelect.setEnabled(True)
+                                self.nowStartSelect.setChecked(True)
+                                self.laterStartSelect.setEnabled(True)
+                                self.buttonStartSelect.setEnabled(True)
+                                self.nowStartSelect.setFocus()
+				
         def setFilename(self):
-                self.filename = self.rtcThread.getTimeStr()
-                self.writer = csv.writer(open(self.filename,'a'))
+                self.filename = self.rtcThread.getTimeStr() + ".csv"
+		self.file = open(self.filename,'a')
+                self.writer = csv.writer(self.file)
 
+	def alarmResponse(self):
+		if self.selectionState == 6:
+			self.setFilename()
+			self.adcThread.active = True
+			if self.endSetting = 1:
+				hour = starttime.toString("h")
+                                minute = starttime.toString("m")
+                                self.rtcThread.setAlarm(hour,minute)
+			self.selectionState = 7
+		elif self.selectionState == 7:
+			self.adcThread.active = False
+			self.selectionState = 0
+			self.file.close()
 
 	def keyDecode(self,e):
 		if e == 0:
@@ -376,7 +401,7 @@ class rtcAlarm(QtCore.QThread,InterruptSignals):
                                         if GPIO.input(self.pin)==0:
                                 #GPIO.wait_for_edge(self.pin,GPIO.FALLING)
                                 #print `self.pin` + "Pressed"
-                                                self.emit(QtCore.SIGNAL("keyDe$
+                                                self.emit(QtCore.SIGNAL("alarmResponse()"))
                         except KeyboardInterrupt:
                                 print "Exiting"
                         sleep(0.1)
