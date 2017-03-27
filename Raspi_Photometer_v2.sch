@@ -774,7 +774,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <package name="BANANA_CONN">
 <circle x="0" y="0" radius="2.8398" width="0.127" layer="21"/>
 <circle x="0" y="0" radius="6.35" width="0.127" layer="21"/>
-<smd name="P$2" x="7.3025" y="0" dx="14.605" dy="4.572" layer="16"/>
+<smd name="P$2" x="5.3975" y="0" dx="10.16" dy="4.572" layer="16"/>
 <circle x="0" y="0" radius="3.175" width="0.127" layer="16"/>
 </package>
 </packages>
@@ -25476,7 +25476,7 @@ Source: http://focus.ti.com/lit/ds/symlink/lm336-2.5.pdf</description>
 <part name="SG1" library="CEDT_JANUARY_2015_v5" deviceset="BUZZER" device=""/>
 <part name="GND12" library="01_FAB_Hello (2)" deviceset="GND" device=""/>
 <part name="LCD_FRONT" library="CEDT_JANUARY_2015_v4" deviceset="TFT_LCD_2.2" device=""/>
-<part name="C13" library="rcl" deviceset="C-US" device="C0805"/>
+<part name="C13" library="rcl" deviceset="C-US" device="C0805" value="0.1uF"/>
 <part name="CLKOUT1" library="CEDT_2016_V1" deviceset="LED" device="1206" value="LED1206"/>
 <part name="R15" library="rcl" deviceset="R-US_" device="0204/7" value="330"/>
 <part name="IC1" library="SparkFun-PowerIC" deviceset="V_REG_LM1117" device="SOT223"/>
