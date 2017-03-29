@@ -28,6 +28,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		self.left = 16
 		self.right = 21
 		self.up = 12
+
 		self.down = 26
 		self.ok = 20
 	
@@ -346,6 +347,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                 	self.rateSelect.setEnabled(False)
 			self.sampleCount = 0
 
+
 			if self.startSetting == 0:
 				if self.endSetting == 1:
 					hour = endTime.toString("h")
@@ -368,10 +370,31 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		
 		elif self.selectionState == 6 and self.buttonStart == True:
 			self.setFileName()
+
+			if startSetting == 0:
+				if self.endSetting == 1:
+					hour = endTime.toString("h")
+        	                        minute = endTime.toString("m")
+	                                self.rtcThread.setAlarm(hour,minute)
+                	                self.alarmThread.active = True
+					self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmResponse)
+				self.adcThread.active = True
+				self.selectionState = 7
+			elif startSetting == 1:
+				hour = self.startTime.toString("h")
+				minute = self.startTime.toString("m")
+				self.rtcThread.setAlarm(hour,minute)
+				self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmResponse)
+			elif startSetting == 2:
+				self.buttonStart = True
+		
+		elif self.selectionState == 6 and self.buttonStart == True:
+
  			self.adcThread.active = True
 			self.selectionState = 7
 
 		elif self.selectionState == 7:
+
 
 			if self.endSetting == 0:
 				self.adcThread.active = False
@@ -380,7 +403,10 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
         	                self.laterStartSelect.setEnabled(True)
                 	        self.buttonStartSelect.setEnabled(True)
 				self.nowStartSelect.setFocus()
+
 				#self.file.close()
+
+
 				self.selectionState = 0
 
 #			elif endSetting  == 2:
@@ -395,13 +421,13 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 			if self.sampleCount == self.samples:
 				self.adcThread.active = False
 				self.selectionState = 0
-				#self.file.close()
                                 self.nowStartSelect.setEnabled(True)
                                 self.nowStartSelect.setChecked(True)
                                 self.laterStartSelect.setEnabled(True)
                                 self.buttonStartSelect.setEnabled(True)
                                 self.nowStartSelect.setFocus()
 				
+
         def setFileName(self):
                 self.filename = self.rtcThread.getTimeStr() + ".csv"
 		self.file = open(self.filename,'a')
@@ -419,6 +445,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		elif self.selectionState == 7:
 			self.adcThread.active = False
 			self.selectionState = 0
+
 			#self.file.close()
 
 	def keyDecode(self,e):
