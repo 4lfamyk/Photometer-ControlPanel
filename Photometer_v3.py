@@ -6,8 +6,11 @@ import UI
 import RPi.GPIO as GPIO
 from time import sleep
 import csv
-import PCF8563
+from PCF8563 import PCF8563
+from hx711 import HX711
 
+
+#Test
 class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 	def __init__(self,parent=None):
 
@@ -22,18 +25,25 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		self.buttonEnd = False
 	#Pin Assignments
 
-		self.left = 17
-		self.right = 26
-		self.up = 0
-		self.down = 0
-		self.ok = 0
+		self.left = 16
+		self.right = 21
+		self.up = 12
+		self.down = 26
+		self.ok = 20
+	
+		self.rtcInt = 14
+		self.hxDat = 15
+		self.hxSck = 18
+		
+		self.led = 23
+		self.buzzer = 24
+		self.power = 19
+		
 
 	#Connections and Threads Setup
          
 		self.setupSignals()
 		self.setupControl()
-		self.nowStartSelect.setChecked(True)
-		self.nowStartSelect.setFocus()
 		self.show()
 
 #Defines a keyboard based navigation schema of the GUI
@@ -129,11 +139,11 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 
 			elif self.selectionState == 6:
 				self.operationReady = 1
-				self.goButton.clicked.emit()
+				self.goButtonClicked()
 
 			elif self.selectionState == 7:
 				self.operationReady = 0
-				self.goButton.clicked.emit()
+				self.goButtonClicked()
 				
 
 		elif e.key() == QtCore.Qt.Key_Left:
@@ -186,29 +196,116 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 
 
 		elif e.key() == QtCore.Qt.Key_Up:
-			print "Up Pressed"
+			if self.startTimeEdit.isEnabled()==True:
+				time = self.startTimeEdit.time()
+				if self.startTimeEdit.currentSection() == 0x0010:
+					if time.hour()+1 == 24:
+						 time.setHMS(0,time.minute(),0)					
+					else:					
+						time.setHMS(time.hour() + 1,time.minute(),0)
+						
+					self.startTimeEdit.setTime(time)
+				elif self.startTimeEdit.currentSection() == 0x0008:
+					if time.minute()+1 == 60:
+						 time.setHMS(time.hour(),0,0)					
+					else:					
+						time.setHMS(time.hour(),time.minute()+1,0)
+						
+					self.startTimeEdit.setTime(time)
+			elif self.endTimeEdit.isEnabled()==True:
+				time = self.endTimeEdit.time()
+				if self.endTimeEdit.currentSection() == 0x0010:
+					if time.hour()+1 == 24:
+						 time.setHMS(0,time.minute(),0)					
+					else:					
+						time.setHMS(time.hour() + 1,time.minute(),0)
+						
+					self.endTimeEdit.setTime(time)
+				elif self.endTimeEdit.currentSection() == 0x0008:
+					if time.minute()+1 == 60:
+						 time.setHMS(time.hour(),0,0)					
+					else:					
+						time.setHMS(time.hour(),time.minute()+1,0)
+						
+					self.endTimeEdit.setTime(time)
+			elif self.sampleSelect.isEnabled() == True:
+				v = self.sampleSelect.value()
+				v = v+10
+				if v == 1010:
+					v = 10
+				self.sampleSelect.setValue(v)
+			elif self.rateSelect.hasFocus() == True:
+				v = self.rateSelect.value()
+				v = v+1
+				if v == 11:
+					v = 1
+				self.rateSelect.setValue(v)
+
 		elif e.key() == QtCore.Qt.Key_Down:
-			print "Down Pressed"
+			if self.startTimeEdit.isEnabled()==True:
+				time = self.startTimeEdit.time()
+				if self.startTimeEdit.currentSection() == 0x0010:
+					if time.hour()-1 == -1:
+						 time.setHMS(23,time.minute(),0)					
+					else:					
+						time.setHMS(time.hour() - 1,time.minute(),0)
+						
+					self.startTimeEdit.setTime(time)
+				elif self.startTimeEdit.currentSection() == 0x0008:
+					if time.minute()-1 == -1:
+						 time.setHMS(time.hour(),59,0)					
+					else:					
+						time.setHMS(time.hour(),time.minute()-1,0)
+					self.startTimeEdit.setTime(time)
+			elif self.endTimeEdit.isEnabled()==True:
+				time = self.endTimeEdit.time()
+				if self.endTimeEdit.currentSection() == 0x0010:
+					if time.hour()-1 == -1:
+						 time.setHMS(23,time.minute(),0)					
+					else:					
+						time.setHMS(time.hour() -1,time.minute(),0)
+						
+					self.endTimeEdit.setTime(time)
+				elif self.endTimeEdit.currentSection() == 0x0008:
+					if time.minute()-1 == -1:
+						 time.setHMS(time.hour(),59,0)					
+					else:					
+						time.setHMS(time.hour(),time.minute()-1,0)
+						
+					self.endTimeEdit.setTime(time)
+			elif self.sampleSelect.isEnabled() == True:
+				v = self.sampleSelect.value()
+				v = v-10
+				if v == 0:
+					v = 1000
+				self.sampleSelect.setValue(v)
+			elif self.rateSelect.hasFocus() == True:
+				v = self.rateSelect.value()
+				v = v-1
+				if v == 0:
+					v = 10
+				self.rateSelect.setValue(v)
+
+
 
 	def setupControl(self):
                 self.rtcThread = RTC()
-                self.alarmThread = rtcAlarm()
-                self.adcThread = ADC()
+                self.alarmThread = rtcAlarm(self.rtcInt)
+                self.adcThread = ADC(self.hxDat,self.hxSck)
                 self.rtcThread.start()
                 self.adcThread.start()
                 self.alarmThread.start()
                 self.rtcThread.active = True
                 self.adcThread.connect(self.adcThread,QtCore.SIGNAL("sampleReady(float)"),self.sampleReady)
-		self.alarmThread.connect(self.alarmThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
+		self.alarmThread.connect(self.alarmThread,QtCore.SIGNAL("alarmResponse()"),self.alarmResponse)
 
 
 #Sets up the interconnections between the various threads
 	def setupSignals(self):
-		self.signalObj = InterruptSignals()
-		self.signalObj.Key.connect(self.keyPressEvent)
 	
 		self.nowStartSelect.setFocus()
 		self.nowStartSelect.setEnabled(True)
+		self.nowStartSelect.setChecked(True)
 		self.goButton.clicked.connect(self.goButtonClicked)
 
                 self.leftKey = switchInterruptThread(self.left,1)
@@ -219,9 +316,9 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 
 		self.leftKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
 		self.rightKey.connect(self.rightKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
-                self.upKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
-                self.downKey.connect(self.rightKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
-                self.okKey.connect(self.leftKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.upKey.connect(self.upKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.downKey.connect(self.downKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
+                self.okKey.connect(self.okKey,QtCore.SIGNAL("keyDecode(int)"),self.keyDecode)
 
 		self.leftKey.active = True
 		self.rightKey.active = True
@@ -249,59 +346,63 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                 	self.rateSelect.setEnabled(False)
 			self.sampleCount = 0
 
-			if startSetting == 0:
-				if self.endSetting = 1:
+			if self.startSetting == 0:
+				if self.endSetting == 1:
 					hour = endTime.toString("h")
         	                        minute = endTime.toString("m")
+					print "end time: " + hour + ":" + minute
 	                                self.rtcThread.setAlarm(hour,minute)
                 	                self.alarmThread.active = True
-					self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
+					self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmResponse)
+				self.setFileName()
 				self.adcThread.active = True
 				self.selectionState = 7
-			elif startSetting == 1:
+			elif self.startSetting == 1:
 				hour = self.startTime.toString("h")
 				minute = self.startTime.toString("m")
+				print "end time: " + hour + ":" + minute
 				self.rtcThread.setAlarm(hour,minute)
-				self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmRespose)
-			elif startSetting == 2:
+				self.rtcThread.connect(self.rtcThread,QtCore.SIGNAL("alarmResponse()"),self.alarmResponse)
+			elif self.startSetting == 2:
 				self.buttonStart = True
 		
 		elif self.selectionState == 6 and self.buttonStart == True:
+			self.setFileName()
  			self.adcThread.active = True
 			self.selectionState = 7
 
 		elif self.selectionState == 7:
 
-			if endSetting == 0:
+			if self.endSetting == 0:
 				self.adcThread.active = False
 				self.nowStartSelect.setEnabled(True)
 	                        self.nowStartSelect.setChecked(True)
         	                self.laterStartSelect.setEnabled(True)
                 	        self.buttonStartSelect.setEnabled(True)
 				self.nowStartSelect.setFocus()
-				self.file.close()
+				#self.file.close()
 				self.selectionState = 0
 
-			elif endSetting  == 2:
+#			elif endSetting  == 2:
 
 	
-	def sampleReady(self,sample):
-                timestamp = self.rtcThread.time
-                entry = [self.timestamp,self.data]
+	def sampleReady(self,data):
+                timestamp = self.rtcThread.timestr
+                entry = [timestamp,data]
                 self.writer.writerow(entry)
 		self.sampleCount = self.sampleCount + 1
 		if self.endSetting == 2:
 			if self.sampleCount == self.samples:
 				self.adcThread.active = False
 				self.selectionState = 0
-				self.file.close()
+				#self.file.close()
                                 self.nowStartSelect.setEnabled(True)
                                 self.nowStartSelect.setChecked(True)
                                 self.laterStartSelect.setEnabled(True)
                                 self.buttonStartSelect.setEnabled(True)
                                 self.nowStartSelect.setFocus()
 				
-        def setFilename(self):
+        def setFileName(self):
                 self.filename = self.rtcThread.getTimeStr() + ".csv"
 		self.file = open(self.filename,'a')
                 self.writer = csv.writer(self.file)
@@ -310,7 +411,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		if self.selectionState == 6:
 			self.setFilename()
 			self.adcThread.active = True
-			if self.endSetting = 1:
+			if self.endSetting == 1:
 				hour = starttime.toString("h")
                                 minute = starttime.toString("m")
                                 self.rtcThread.setAlarm(hour,minute)
@@ -318,7 +419,7 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
 		elif self.selectionState == 7:
 			self.adcThread.active = False
 			self.selectionState = 0
-			self.file.close()
+			#self.file.close()
 
 	def keyDecode(self,e):
 		if e == 0:
@@ -338,39 +439,74 @@ class Photometer(QtGui.QMainWindow,UI.Ui_MainWindow):
                         self.keyPressEvent(ap)
 
 #Defines a thread class that operates on the various threads
-class switchInterruptThread(QtCore.QThread,InterruptSignals):
+class switchInterruptThread(QtCore.QThread):
 	def __init__(self,pin,key,parent=None):
-		InterruptSignals.__init__(self)
 		QtCore.QThread.__init__(self,parent)
 		self.setTerminationEnabled(True)
 		self.pin = pin
+	#	self.upPin = 16
+	#	self.downPin = 26
+	#	self.leftPin = 21
+	#	self.rightPin = 12
+	#	self.okPin = 20
 		self.key = key
 		self.active = False
 		GPIO.setup(self.pin,GPIO.IN)
+            #    GPIO.setup(26,GPIO.IN)
+             #   GPIO.setup(21,GPIO.IN)
+              #  GPIO.setup(12,GPIO.IN)
+               # GPIO.setup(20,GPIO.IN)
+
+
+
 	def run(self):
-		while self.active==True:
-			try:
-				if GPIO.input(self.pin)==0:
-					sleep(0.08)
-					if GPIO.input(self.pin)==0:
+		while True:
+			while self.active==True:
+				try:
+					if GPIO.input(self.pin)==GPIO.LOW:
+						sleep(0.08)
+						if GPIO.input(self.pin)==GPIO.LOW:
 				#GPIO.wait_for_edge(self.pin,GPIO.FALLING)
 				#print `self.pin` + "Pressed"
-						self.emit(QtCore.SIGNAL("keyDecode(int)"),self.key)	
-			except KeyboardInterrupt: 
-				print "Exiting"
-			sleep(0.1)
+							print self.key
+							self.emit(QtCore.SIGNAL("keyDecode(int)"),self.key)	
+
+#                                        if GPIO.input(self.upPin)==GPIO.LOW:
+ #                                              sleep(0.3)
+  #                                             if GPIO.input(self.upPin)==GPIO.LOW:
+   #                                                    self.emit(QtCore.SIGNAL("keyDecode(int)"),3)
+    #                                    if GPIO.input(self.leftPin)==GPIO.LOW:
+     #                                          sleep(0.3)
+      #                                         if GPIO.input(self.leftPin)==GPIO.LOW:
+       #                                                self.emit(QtCore.SIGNAL("keyDecode(int)"),1)
+        #                                if GPIO.input(self.rightPin)==GPIO.LOW:
+         #                                      sleep(0.3)
+          #                                     if GPIO.input(self.rightPin)==GPIO.LOW:
+           #                                            self.emit(QtCore.SIGNAL("keyDecode(int)"),2)
+            #                            if GPIO.input(self.okPin)==GPIO.LOW:
+             #                                  sleep(0.3)
+              #                                 if GPIO.input(self.okPin)==GPIO.LOW:
+               #                                        self.emit(QtCore.SIGNAL("keyDecode(int)"),0)
+                #                        if GPIO.input(self.downPin)==GPIO.LOW:
+                 #                              sleep(0.3)
+                  #                             if GPIO.input(self.downPin)==GPIO.LOW:
+                   #                                    self.emit(QtCore.SIGNAL("keyDecode(int)"),4)
+					sleep(0.1)
+				except KeyboardInterrupt: 
+					print "Exiting"
+#				self.sleep(100)
 
 class RTC(QtCore.QThread):
-	def __init__(self):
+	def __init__(self,parent=None):
 		QtCore.QThread.__init__(self,parent)
 		self.setTerminationEnabled(True)
 		self.active = False
 		self.rtc = PCF8563(1,0x51)
-		self.time = self.rtc.read_datetime()
+		#self.time = self.rtc.read_datetime()
 	def run(self):
 		while True:
 			while self.active:
-				self.time = self.rtc.read_datetime()
+				#self.time = self.rtc.read_datetime()
 				self.timestr = self.rtc.read_str()
 	def setAlarm(self,hour,min):
 		if self.rtc.check_if_alarm_on():
@@ -382,15 +518,14 @@ class RTC(QtCore.QThread):
 		self.rtc.enable_alarm_interrupt()
 		
 	def getTimeStr(self):
-		return self.rtc.read_str()
+		return self.timestr
 
-class rtcAlarm(QtCore.QThread,InterruptSignals):
-        def __init__(self,pin,key,parent=None):
-                InterruptSignals.__init__(self)
+class rtcAlarm(QtCore.QThread):
+        def __init__(self,pin,parent=None):
                 QtCore.QThread.__init__(self,parent)
                 self.setTerminationEnabled(True)
                 self.pin = pin
-                self.key = key
+#                self.key = key
                 self.active = False
                 GPIO.setup(self.pin,GPIO.IN)
         def run(self):
@@ -427,10 +562,13 @@ class ADC(QtCore.QThread):
 	def run(self):
 		while True:
 			while self.active == True:
-				self.delayval = (1/self.rate) -(0.05)
-				self.value = self.adc.get_weight(4)
-				self.emit(QtCore.SIGNAL("sampleReady(float)"),self.value)				
-				sleep(self.delayval)			
+				self.delayval = (1/self.rate)
+				print self.delayval
+				self.value = self.adc.get_weight(8)
+				print self.value
+				print self.delayval
+				self.emit(QtCore.SIGNAL("sampleReady(float)"),self.value)
+				sleep(self.delayval)							
 			sleep(0.01)
 
 	def setRate(self,rate):

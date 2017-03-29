@@ -137,7 +137,7 @@ class PCF8563():
     def read_datetime(self, century=21, tzinfo=None):
         """Return the datetime.datetime object.
         """
-        return datetime((century - 1) * 100 + self._read_year(),
+	return datetime((century - 1) * 100 + self._read_year(),
                         self._read_month(), self._read_date(), self._read_hours(),
                         self._read_minutes(), self._read_seconds(), 0, tzinfo=tzinfo)
 

@@ -12,7 +12,7 @@ import sys
 import time
 import datetime
 
-from Sensors import PCF8563
+import PCF8563
 
 # Main Program
 
@@ -25,7 +25,7 @@ print "Program Started at:"+ time.strftime("%Y-%m-%d %H:%M:%S")
 filename = time.strftime("%Y-%m-%d%H:%M:%SRTCTest") + ".txt"
 starttime = datetime.datetime.utcnow()
 
-pcf8563 = PCF8563(1, 0x51) 
+pcf8563 = PCF8563.PCF8563(1, 0x51) 
 #pcf8563.write_now()
 
 # Main Loop - sleeps 10 minutes, then reads and prints values of all clocks
@@ -40,6 +40,6 @@ while True:
 	print ""
 	print "Raspberry Pi=\t" + time.strftime("%Y-%m-%d %H:%M:%S")
 	
-	print "PCF8563=\t\t%s" % pcf8563._read_seconds()
+	print "PCF8563= " + pcf8563._read_str()
 
 	time.sleep(1.0)
